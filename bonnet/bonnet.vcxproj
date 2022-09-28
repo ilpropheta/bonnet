@@ -67,6 +67,9 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+	<ResourceCompile>
+      <PreprocessorDefinitions>PRODUCT_VERSION=\"$(ProductVersion)\";APP_VERSION=\"0.0.0.0\";APP_VERSION_BINARY=0,0,0,0;APP_COPYRIGHT_YEAR=\"$([System.DateTime]::Now.Year.ToString())\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -88,6 +91,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+	<ResourceCompile>
+      <PreprocessorDefinitions>PRODUCT_VERSION=\"$(ProductVersion)\";APP_VERSION=\"0.0.0.0\";APP_VERSION_BINARY=0,0,0,0;APP_COPYRIGHT_YEAR=\"$([System.DateTime]::Now.Year.ToString())\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\deps\process.cpp" />
@@ -101,6 +107,10 @@
   <ItemGroup>
     <ClInclude Include="..\deps\process.hpp" />
     <ClInclude Include="bonnet.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="bonnet.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
