@@ -57,6 +57,8 @@ BEGIN
     END
 END
 
+MAINICON ICON "bonnet.ico"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
