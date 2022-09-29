@@ -29,6 +29,23 @@ static void set_fullscreen(HWND hwnd)
     ShowWindow(hwnd, SW_SHOWMAXIMIZED);
 }
 
+static void change_icon(HWND hwnd, const std::string& iconPath)
+{
+    auto icon = static_cast<HICON>(LoadImage( // returns a HANDLE so we have to cast to HICON
+	    NULL, // hInstance must be NULL when loading from a file
+	    std::wstring(begin(iconPath), end(iconPath)).c_str(), // the icon file name
+	    IMAGE_ICON, // specifies that the file is an icon
+	    0, // width of the image (we'll specify default later on)
+	    0, // height of the image
+	    LR_LOADFROMFILE | // we want to load a file (as opposed to a resource)
+	    LR_DEFAULTSIZE | // default metrics based on the type (IMAGE_ICON, 32x32)
+	    LR_SHARED // let the system release the handle when it's no longer used
+    ));
+
+    SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(icon));
+    SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(icon));
+}
+
 namespace options
 {
     inline const std::string fullscreen = "fullscreen";
@@ -39,6 +56,7 @@ namespace options
     inline const std::string backend = "backend";
     inline const std::string backend_show_console = "backend-console";
     inline const std::string title = "title";
+    inline const std::string icon = "icon";
     inline const std::string help = "help";
 }
 
@@ -47,21 +65,22 @@ static std::string to_string(bool b)
     return b ? std::use_facet<std::numpunct<char>>(std::locale("")).truename() : std::use_facet<std::numpunct<char>>(std::locale("")).falsename();
 }
 
-cxxopts::Options& GetOptions()
+cxxopts::Options& get_options()
 {
     static cxxopts::Options options = [] {
         cxxopts::Options options{ "bonnet", "Launch your front-end and back-end with a single command" };
         const bonnet::config default_config;
     	options.add_options()
             (options::help, "Print help")
-            (options::fullscreen, "Fullscreen borderless mode", cxxopts::value<bool>()->default_value(to_string(default_config.fullscreen)))
-            (options::debug, "Enable build tools", cxxopts::value<bool>()->default_value(to_string(default_config.debug)))
-            (options::width, "Window width, ignores --fullscreen, ", cxxopts::value<int>()->default_value(std::to_string(default_config.window_size.first)))
-            (options::height, "Window height, ignores --fullscreen, ", cxxopts::value<int>()->default_value(std::to_string(default_config.window_size.second)))
-            (options::backend, "Backend process", cxxopts::value<std::string>()->default_value(default_config.backend))
-            (options::backend_show_console, "Show console on backend process", cxxopts::value<bool>()->default_value(to_string(default_config.backend_show_console)))
+            (options::width, "Window width", cxxopts::value<int>()->default_value(std::to_string(default_config.window_size.first)))
+            (options::height, "Window height", cxxopts::value<int>()->default_value(std::to_string(default_config.window_size.second)))
             (options::title, "Window title", cxxopts::value<std::string>()->default_value(default_config.title))
-            (options::url, "Navigation url", cxxopts::value<std::string>()->default_value(default_config.url));
+            (options::icon, "Window icon path", cxxopts::value<std::string>()->default_value(default_config.icon))
+            (options::fullscreen, "Fullscreen borderless mode", cxxopts::value<bool>()->default_value(to_string(default_config.fullscreen)))
+    		(options::url, "Navigation url", cxxopts::value<std::string>()->default_value(default_config.url))
+            (options::backend, "Backend process", cxxopts::value<std::string>()->default_value(default_config.backend))
+            (options::backend_show_console, "Show console of backend process", cxxopts::value<bool>()->default_value(to_string(default_config.backend_show_console)))
+    		(options::debug, "Enable build tools", cxxopts::value<bool>()->default_value(to_string(default_config.debug)));
     	return options;
     }();
     return options;
@@ -70,7 +89,7 @@ cxxopts::Options& GetOptions()
 void bonnet::launcher::launch_with_args(int argc, char** argv, std::function<void(const std::string&)> on_help)
 {
     config bonnet_conf;
-    auto cmd_line_options = GetOptions();
+    auto cmd_line_options = get_options();
 
     try
     {
@@ -87,6 +106,7 @@ void bonnet::launcher::launch_with_args(int argc, char** argv, std::function<voi
             bonnet_conf.window_size = { result[options::width].as<int>(), result[options::height].as<int>() };
         }
         bonnet_conf.title = result[options::title].as<std::string>();
+        bonnet_conf.icon = result[options::icon].as<std::string>();
         bonnet_conf.url = result[options::url].as<std::string>();
         bonnet_conf.backend = result[options::backend].as<std::string>();
         bonnet_conf.debug = result[options::debug].as<bool>();
@@ -124,12 +144,13 @@ void bonnet::launcher::launch_with_config(const config& config)
     {
         w.set_size(config.window_size.first, config.window_size.second, WEBVIEW_HINT_NONE);
     }
-
-    w.navigate(config.url);
+    if (!config.icon.empty())
+    {
+        change_icon(static_cast<HWND>(w.window()), config.icon);
+    }
 
     std::function process_closer = [] {};
     deferred_action_t deferred{ [&] { process_closer(); } };
-
     if (!config.backend.empty())
     {
     	TinyProcessLib::Config backendConfig;
@@ -138,5 +159,6 @@ void bonnet::launcher::launch_with_config(const config& config)
         process_closer = [p = std::move(process)]{ p->ctrl_c(); };
     }
 
+	w.navigate(config.url);
     w.run();
 }

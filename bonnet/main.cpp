@@ -1,7 +1,7 @@
 #include <Windows.h>
 #include "bonnet.h"
 
-void ShowMessageBox(const std::string& message, const std::wstring& title, int type)
+void show_message_box(const std::string& message, const std::wstring& title, int type)
 {
     MessageBox(NULL,
         std::wstring(begin(message), end(message)).c_str(),
@@ -10,25 +10,25 @@ void ShowMessageBox(const std::string& message, const std::wstring& title, int t
     );
 }
 
-void ShowError(const std::string& message)
+void show_error(const std::string& message)
 {
-    ShowMessageBox(message, L"bonnet error", MB_ICONERROR);
+    show_message_box(message, L"bonnet error", MB_ICONERROR);
 }
 
-void ShowInfo(const std::string& message)
+void show_info(const std::string& message)
 {
-    ShowMessageBox(message, L"bonnet info", MB_OK);
+    show_message_box(message, L"bonnet info", MB_OK);
 }
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int nCmdShow)
 {
     try
     {
-        bonnet::launcher::launch_with_args(__argc, __argv, ShowInfo);
+        bonnet::launcher::launch_with_args(__argc, __argv, show_info);
     }
     catch(const std::exception& ex)
     {
-        ShowError(ex.what());
+        show_error(ex.what());
         return 1;
     }
     return 0;

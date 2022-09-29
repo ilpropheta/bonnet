@@ -7,13 +7,14 @@ namespace bonnet
 {
 	struct config
 	{
-		bool fullscreen = true;
+		bool fullscreen = false;
 		bool debug = false;
 		bool backend_show_console = false;
-		std::pair<int, int> window_size = { 1024, 468 };
+		std::pair<int, int> window_size = { 1024, 768 };
 		std::string title = "bonnet";
 		std::string url = "https://google.com";
 		std::string backend;
+		std::string icon;
 	};
 
 	class launcher
