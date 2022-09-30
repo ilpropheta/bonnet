@@ -67,7 +67,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-	<ResourceCompile>
+    <ResourceCompile>
       <PreprocessorDefinitions>PRODUCT_VERSION=\"$(ProductVersion)\";APP_VERSION=\"0.0.0.0\";APP_VERSION_BINARY=0,0,0,0;APP_COPYRIGHT_YEAR=\"$([System.DateTime]::Now.Year.ToString())\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>
@@ -84,6 +84,7 @@
       <Optimization>MinSpace</Optimization>
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -91,7 +92,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
-	<ResourceCompile>
+    <ResourceCompile>
       <PreprocessorDefinitions>PRODUCT_VERSION=\"$(ProductVersion)\";APP_VERSION=\"0.0.0.0\";APP_VERSION_BINARY=0,0,0,0;APP_COPYRIGHT_YEAR=\"$([System.DateTime]::Now.Year.ToString())\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
   </ItemDefinitionGroup>

@@ -10,6 +10,8 @@ namespace bonnet
 		bool fullscreen = false;
 		bool debug = false;
 		bool backend_show_console = false;
+		bool backend_no_log = false;
+		bool no_log_at_all = false;
 		std::pair<int, int> window_size = { 1024, 768 };
 		std::string title = "bonnet";
 		std::string url = "https://google.com";
