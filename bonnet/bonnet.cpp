@@ -1,13 +1,19 @@
+#include "resource.h"
 #include "bonnet.h"
 #include <fstream>
 #include <numeric>
 #include <cxxopts.hpp>
-#pragma warning (disable:4267) // due to webview.h(186,18)
 #include <iostream>
 #include <format>
 #include <chrono>
-#include <webview.h>
 #include "process.hpp"
+#pragma warning (disable:4267) // due to webview.h(186,18)
+#include <webview.h>
+
+static std::wstring to_wstring(const std::string& s)
+{
+    return { begin(s), end(s) };
+}
 
 static void set_fullscreen(HWND hwnd)
 {
@@ -36,16 +42,24 @@ static void set_fullscreen(HWND hwnd)
 
 static void change_icon(HWND hwnd, const std::string& iconPath)
 {
-    auto icon = static_cast<HICON>(LoadImage( // returns a HANDLE so we have to cast to HICON
-	    NULL, // hInstance must be NULL when loading from a file
-	    std::wstring(begin(iconPath), end(iconPath)).c_str(), // the icon file name
-	    IMAGE_ICON, // specifies that the file is an icon
-	    0, // width of the image (we'll specify default later on)
-	    0, // height of the image
-	    LR_LOADFROMFILE | // we want to load a file (as opposed to a resource)
-	    LR_DEFAULTSIZE | // default metrics based on the type (IMAGE_ICON, 32x32)
-	    LR_SHARED // let the system release the handle when it's no longer used
-    ));
+    HICON icon;
+    if (iconPath.empty())
+    {
+        icon = LoadIcon(GetModuleHandle(nullptr), MAKEINTRESOURCE(MAINICON));
+    }
+    else
+    {
+        icon = static_cast<HICON>(LoadImage( // returns a HANDLE so we have to cast to HICON
+            nullptr, // hInstance must be NULL when loading from a file
+            to_wstring(iconPath).c_str(), // the icon file name
+            IMAGE_ICON, // specifies that the file is an icon
+            0, // width of the image (we'll specify default later on)
+            0, // height of the image
+            LR_LOADFROMFILE | // we want to load a file (as opposed to a resource)
+            LR_DEFAULTSIZE | // default metrics based on the type (IMAGE_ICON, 32x32)
+            LR_SHARED // let the system release the handle when it's no longer used
+        ));
+    }
 
     SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(icon));
     SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(icon));
@@ -61,6 +75,8 @@ namespace options
     inline const std::string width = "width";
     inline const std::string height = "height";
     inline const std::string backend = "backend";
+    inline const std::string backend_workdir = "backend-workdir";
+    inline const std::string backend_args = "backend-args";
     inline const std::string backend_show_console = "backend-console";
     inline const std::string title = "title";
     inline const std::string icon = "icon";
@@ -98,7 +114,9 @@ cxxopts::Options& get_options()
             (options::icon, "Window icon path", cxxopts::value<std::string>()->default_value(default_config.icon))
             (options::fullscreen, "Fullscreen borderless mode", cxxopts::value<bool>()->default_value(to_string(default_config.fullscreen)))
     		(options::url, "Navigation url", cxxopts::value<std::string>()->default_value(default_config.url))
-            (options::backend, "Backend process", cxxopts::value<std::vector<std::string>>()->default_value(to_string(default_config.backend)))
+            (options::backend, "Backend process", cxxopts::value<std::string>()->default_value(default_config.backend))
+            (options::backend_workdir, "Backend process working dir", cxxopts::value<std::string>()->default_value(default_config.backend_workdir))
+            (options::backend_args, "Backend process arguments", cxxopts::value<std::vector<std::string>>()->default_value(to_string(default_config.backend_args)))
             (options::backend_show_console, "Show console of backend process", cxxopts::value<bool>()->default_value(to_string(default_config.backend_show_console)))
             (options::backend_no_log, "Disable backend output to file", cxxopts::value<bool>()->default_value(to_string(default_config.backend_no_log)))
     		(options::debug, "Enable build tools", cxxopts::value<bool>()->default_value(to_string(default_config.debug)))
@@ -106,6 +124,14 @@ cxxopts::Options& get_options()
     	return options;
     }();
     return options;
+}
+
+static void fix_cxxopts_behavior(std::vector<std::string>& v)
+{
+	if (v.size()==1 && v.front().empty())
+	{
+        v.clear();
+	}
 }
 
 void bonnet::launcher::launch_with_args(int argc, char** argv, std::function<void(const std::string&)> on_help)
@@ -126,7 +152,9 @@ void bonnet::launcher::launch_with_args(int argc, char** argv, std::function<voi
         bonnet_conf.title = result[options::title].as<std::string>();
         bonnet_conf.icon = result[options::icon].as<std::string>();
         bonnet_conf.url = result[options::url].as<std::string>();
-        bonnet_conf.backend = result[options::backend].as<std::vector<std::string>>();
+        bonnet_conf.backend = result[options::backend].as<std::string>();
+        bonnet_conf.backend_workdir = result[options::backend_workdir].as<std::string>();
+        fix_cxxopts_behavior(bonnet_conf.backend_args = result[options::backend_args].as<std::vector<std::string>>());
         bonnet_conf.debug = result[options::debug].as<bool>();
         bonnet_conf.backend_show_console = result[options::backend_show_console].as<bool>();
         bonnet_conf.backend_no_log = result[options::backend_no_log].as<bool>();
@@ -157,7 +185,6 @@ struct deferred_action_t
     }
 };
 
-// using this revolting stuff only in order to avoid code bloat caused by std::chrono & std::format
 static std::string ts()
 {
     auto const time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
@@ -208,19 +235,18 @@ static logger create_logger(const bonnet::config& config)
     return std::make_unique<file_logger>("bonnet.txt");
 }
 
-static std::vector<std::wstring> marshal_args_to_wstring(const std::vector<std::string>& args)
+static std::vector<std::wstring> marshal_backend_data(const std::string& backend, const std::vector<std::string>& args)
 {
-    std::vector<std::wstring> out(args.size());
-    std::ranges::transform(args, out.begin(), [](const auto& s) {
-        return std::wstring(begin(s), end(s));
-    });
+    std::vector<std::wstring> out(args.size() + 1);
+    out.front() = to_wstring(backend);
+    std::ranges::transform(args, next(out.begin()), to_wstring);
 	return out;
 }
 
 void bonnet::launcher::launch_with_config(const config& config)
 {
 	const auto logger = create_logger(config);
-    deferred_action_t logEnding{ [&] { logger->log_from_bonnet(std::format("ended at {}", ts())); } };
+    deferred_action_t logEnding{ [&] { logger->log_from_bonnet(std::format("ended at {}\n", ts())); } };
     logger->log_from_bonnet(std::format("started at {}", ts()));
 
 	webview::webview w(config.debug, nullptr);
@@ -236,11 +262,9 @@ void bonnet::launcher::launch_with_config(const config& config)
         w.set_size(config.window_size.first, config.window_size.second, WEBVIEW_HINT_NONE);
         logger->log_from_bonnet(std::format("config: size={}x{}", config.window_size.first, config.window_size.second));
     }
-    if (!config.icon.empty())
-    {
-        change_icon(static_cast<HWND>(w.window()), config.icon);
-        logger->log_from_bonnet(std::format("config: icon={}", config.icon));
-    }
+
+	change_icon(static_cast<HWND>(w.window()), config.icon);
+    logger->log_from_bonnet(std::format("config: icon={}", config.icon.empty() ? "default" : config.icon));
 
     std::function<void(const char* bytes, size_t n)> stdout_fun = nullptr;
     std::function process_closer = [] {};
@@ -258,8 +282,8 @@ void bonnet::launcher::launch_with_config(const config& config)
     {
     	TinyProcessLib::Config backendConfig;
         backendConfig.show_window = config.backend_show_console ? TinyProcessLib::Config::ShowWindow::show_default : TinyProcessLib::Config::ShowWindow::hide;
-		std::shared_ptr<TinyProcessLib::Process> process = std::make_shared<TinyProcessLib::Process>(marshal_args_to_wstring(config.backend), L"", stdout_fun, stdout_fun, false, backendConfig);
-        logger->log_from_bonnet(std::format("config: backend={}", to_string(config.backend)));
+		std::shared_ptr<TinyProcessLib::Process> process = std::make_shared<TinyProcessLib::Process>(marshal_backend_data(config.backend, config.backend_args), to_wstring(config.backend_workdir), stdout_fun, stdout_fun, false, backendConfig);
+        logger->log_from_bonnet(std::format("config: backend={} with_args={}", config.backend, to_string(config.backend_args)));
 		process_closer = [p = std::move(process)]{ p->ctrl_c(); };
         if (config.backend_show_console)
         {

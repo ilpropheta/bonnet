@@ -3,7 +3,7 @@
 
 void show_message_box(const std::string& message, const std::wstring& title, int type)
 {
-    MessageBox(NULL,
+    MessageBox(nullptr,
         std::wstring(begin(message), end(message)).c_str(),
         title.c_str(),
         type
