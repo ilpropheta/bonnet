@@ -15,7 +15,7 @@ env:
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
   
-  VERSION_MNOR: '1'
+  VERSION_MINOR: '1'
   VERSION_MAJOR: '0'
   VERSION_PATCH: '0'
   
@@ -27,10 +27,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: set version
-      run: |
-        echo "PRODUCT_VERSION=${{ env.VERSION_MNOR }}.${{ env.VERSION_MAJOR }}.${{ env.VERSION_PATCH }}.${{ github.run_number }}" >> $GITHUB_ENV
-    
+  
     - uses: actions/checkout@v3
 
     - name: Add MSBuild to PATH
@@ -44,7 +41,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:ProductVersion=${{ format('{0}.{1}.{2}.{3}', env.VER_MAJOR, env.VER_MINOR, env.VER_PATCH, github.run_number) }} ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:ProductVersion=${{ format('{0}.{1}.{2}.{3}', env.VERSION_MINOR, env.VERSION_MINOR, env.VERSION_PATCH, github.run_number) }} ${{env.SOLUTION_FILE_PATH}}
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3.1.0
