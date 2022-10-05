@@ -15,7 +15,7 @@ namespace bonnet
 		std::pair<int, int> window_size = { 1024, 768 };
 		std::string title = "bonnet";
 		std::string url = "https://google.com";
-		std::string backend;
+		std::vector<std::string> backend;
 		std::string icon;
 	};
 

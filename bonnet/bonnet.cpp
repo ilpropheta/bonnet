@@ -1,5 +1,6 @@
 #include "bonnet.h"
 #include <fstream>
+#include <numeric>
 #include <cxxopts.hpp>
 #pragma warning (disable:4267) // due to webview.h(186,18)
 #include <iostream>
@@ -71,6 +72,19 @@ static std::string to_string(bool b)
     return b ? std::use_facet<std::numpunct<char>>(std::locale("")).truename() : std::use_facet<std::numpunct<char>>(std::locale("")).falsename();
 }
 
+static std::string to_string(const std::vector<std::string>& args)
+{
+    const auto size = std::accumulate(begin(args), end(args), size_t{}, [](auto sum, const auto& s) { return sum + s.size() + 1; });
+    std::string out(size, 0);
+    auto it = begin(out);
+    for (const auto& s : args)
+    {
+        it = std::ranges::copy(s, it).out;
+        *it++ = ',';
+    }
+    return out;
+}
+
 cxxopts::Options& get_options()
 {
     static cxxopts::Options options = [] {
@@ -84,7 +98,7 @@ cxxopts::Options& get_options()
             (options::icon, "Window icon path", cxxopts::value<std::string>()->default_value(default_config.icon))
             (options::fullscreen, "Fullscreen borderless mode", cxxopts::value<bool>()->default_value(to_string(default_config.fullscreen)))
     		(options::url, "Navigation url", cxxopts::value<std::string>()->default_value(default_config.url))
-            (options::backend, "Backend process", cxxopts::value<std::string>()->default_value(default_config.backend))
+            (options::backend, "Backend process", cxxopts::value<std::vector<std::string>>()->default_value(to_string(default_config.backend)))
             (options::backend_show_console, "Show console of backend process", cxxopts::value<bool>()->default_value(to_string(default_config.backend_show_console)))
             (options::backend_no_log, "Disable backend output to file", cxxopts::value<bool>()->default_value(to_string(default_config.backend_no_log)))
     		(options::debug, "Enable build tools", cxxopts::value<bool>()->default_value(to_string(default_config.debug)))
@@ -112,7 +126,7 @@ void bonnet::launcher::launch_with_args(int argc, char** argv, std::function<voi
         bonnet_conf.title = result[options::title].as<std::string>();
         bonnet_conf.icon = result[options::icon].as<std::string>();
         bonnet_conf.url = result[options::url].as<std::string>();
-        bonnet_conf.backend = result[options::backend].as<std::string>();
+        bonnet_conf.backend = result[options::backend].as<std::vector<std::string>>();
         bonnet_conf.debug = result[options::debug].as<bool>();
         bonnet_conf.backend_show_console = result[options::backend_show_console].as<bool>();
         bonnet_conf.backend_no_log = result[options::backend_no_log].as<bool>();
@@ -194,6 +208,15 @@ static logger create_logger(const bonnet::config& config)
     return std::make_unique<file_logger>("bonnet.txt");
 }
 
+static std::vector<std::wstring> marshal_args_to_wstring(const std::vector<std::string>& args)
+{
+    std::vector<std::wstring> out(args.size());
+    std::ranges::transform(args, out.begin(), [](const auto& s) {
+        return std::wstring(begin(s), end(s));
+    });
+	return out;
+}
+
 void bonnet::launcher::launch_with_config(const config& config)
 {
 	const auto logger = create_logger(config);
@@ -235,8 +258,8 @@ void bonnet::launcher::launch_with_config(const config& config)
     {
     	TinyProcessLib::Config backendConfig;
         backendConfig.show_window = config.backend_show_console ? TinyProcessLib::Config::ShowWindow::show_default : TinyProcessLib::Config::ShowWindow::hide;
-		std::shared_ptr<TinyProcessLib::Process> process = std::make_shared<TinyProcessLib::Process>(std::wstring(begin(config.backend), end(config.backend)), L"", stdout_fun, stdout_fun, false, backendConfig);
-        logger->log_from_bonnet(std::format("config: backend={}", config.backend));
+		std::shared_ptr<TinyProcessLib::Process> process = std::make_shared<TinyProcessLib::Process>(marshal_args_to_wstring(config.backend), L"", stdout_fun, stdout_fun, false, backendConfig);
+        logger->log_from_bonnet(std::format("config: backend={}", to_string(config.backend)));
 		process_closer = [p = std::move(process)]{ p->ctrl_c(); };
         if (config.backend_show_console)
         {
