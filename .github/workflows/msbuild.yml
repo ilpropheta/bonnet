@@ -18,7 +18,7 @@ env:
   VER_MAJOR: '1'
   VER_MINOR: '0'
   VER_PATCH: '0'
-  VERSION: ${{ format('{0}.{1}.{2}.{3}', VER_MAJOR, VER_MINOR, VER_PATCH, GITHUB_RUN_NUMBER) }}
+  VERSION: ${{ format('{0}.{1}.{2}.{3}', env.VER_MAJOR, env.VER_MINOR, env.VER_PATCH, github.run_number) }}
   
 permissions:
   contents: read
