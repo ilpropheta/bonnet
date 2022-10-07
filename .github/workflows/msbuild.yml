@@ -17,7 +17,6 @@ env:
   
   VERSION_MAJOR: '1'
   VERSION_MINOR: '0'
-  VERSION_PATCH: '0'
   
 permissions:
   contents: read
@@ -41,7 +40,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:ProductVersion=${{ format('{0}.{1}.{2}.{3}', env.VERSION_MAJOR, env.VERSION_MINOR, env.VERSION_PATCH, github.run_number) }} ${{env.SOLUTION_FILE_PATH}}
+      run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} /p:ProductVersion=${{ format('{0}.{1}.{2}', env.VERSION_MAJOR, env.VERSION_MINOR, github.run_number) }} ${{env.SOLUTION_FILE_PATH}}
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3.1.0
