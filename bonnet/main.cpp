@@ -1,30 +1,20 @@
 #include <Windows.h>
 #include "bonnet.h"
 
-void show_message_box(const std::string& message, const std::wstring& title, int type)
+void show_error(const std::string& message)
 {
     MessageBox(nullptr,
         std::wstring(begin(message), end(message)).c_str(),
-        title.c_str(),
-        type
+        L"bonnet error",
+        MB_ICONERROR
     );
-}
-
-void show_error(const std::string& message)
-{
-    show_message_box(message, L"bonnet error", MB_ICONERROR);
-}
-
-void show_info(const std::string& message)
-{
-    show_message_box(message, L"bonnet info", MB_OK);
 }
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int nCmdShow)
 {
     try
     {
-        bonnet::launcher::launch_with_args(__argc, __argv, show_info);
+        bonnet::create_launcher(__argc, __argv).launch_and_wait();
     }
     catch(const std::exception& ex)
     {
