@@ -59,6 +59,10 @@ static void change_icon(HWND hwnd, const std::string& iconPath)
             LR_DEFAULTSIZE | // default metrics based on the type (IMAGE_ICON, 32x32)
             LR_SHARED // let the system release the handle when it's no longer used
         ));
+        if (!icon)
+        {
+            throw std::runtime_error(std::format("icon not found: '{}'", iconPath));
+        }
     }
 
     SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(icon));
@@ -168,7 +172,7 @@ void bonnet::launcher::launch_with_args(int argc, char** argv, std::function<voi
     }
     catch (const std::exception& ex)
     {
-        throw std::runtime_error(std::string("Error configuring bonnet: ") + ex.what() + "\n\n" + cmd_line_options.help());
+        throw std::runtime_error(std::format("Error configuring bonnet: {}\n\n{}", ex.what(), cmd_line_options.help()));
     }
 
     launch_with_config(bonnet_conf);
