@@ -128,7 +128,7 @@ namespace window_utils
 
 namespace options
 {
-    inline const std::string fullscreen = "fullscreen";
+    inline const std::string fullscreen = "kiosk-mode";
     inline const std::string maximize = "maximize";
     inline const std::string debug = "debug";
     inline const std::string backend_no_log = "backend-no-log";
