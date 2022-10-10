@@ -12,9 +12,9 @@ Be sure you have both installed on your system to use bonnet.
 
 ## Usage
 
-By default, `bonnet` launches `https://google.com` on a `1024x768` window.
+By default, `bonnet` displays the help on a `1024x768` window.
 
-To display the available commands, type `bonnet --help`:
+Available options:
 
 ```
 Launch your front-end and back-end with a single command
@@ -26,7 +26,7 @@ Usage:
       --height arg           Window height (default: 768)
       --title arg            Window title (default: bonnet)
       --icon arg             Window icon path (default: "")
-      --fullscreen           Fullscreen borderless mode
+      --kiosk-mode           Fullscreen borderless mode
       --url arg              Navigation url (default: https://google.com)
       --backend arg          Backend process (default: "")
       --backend-workdir arg  Backend process working dir (default: "")
@@ -47,13 +47,13 @@ Some examples:
 bonnet --width 500 --height 500 --title "Italian C++ Community" --icon c:\icons\myicon.ico
 ```
 
-### Webpage fullscreen
+### Webpage kiosk-mode
+
+To lock down user experience on fullscreen and bordeless window, use `--kiosk-mode`:
 
 ```
-bonnet --fullscreen --url https://italiancpp.org
+bonnet --kiosk-mode --url https://italiancpp.org
 ```
-
-To close the window here, possibly your website does not hinder `ALT+F4`.
 
 ### Enable developer tools
 
@@ -67,19 +67,23 @@ bonnet --fullscreen --url https://italiancpp.org --debug
 
 ### Custom backend process
 
+`bonnet` can optionally launch and hold a process in background. This feature is useful when you need to pair the front-end window with a backend process.
+
+Here is an example:
+
 ```
 bonnet --fullscreen --url https://your-frontend --backend your-exe.exe
 ```
 
-Arguments can be added with `--backend-args=arg1,arg2,...`:
+Backend arguments might be added with `--backend-args=arg1,arg2,...`:
 
 ```
 bonnet --fullscreen --url https://italiancpp.org --backend your-exe.exe --backend-args=arg1,arg2
 ```
 
-By default, bonnet logs the backend's standard output into `bonnet.txt`. To disable only such logging, use `backend-no-log`.
+By default, bonnet redirects backend's standard output into the log file `bonnet.txt`. To disable such a redirection, launch the program with `backend-no-log`.
 
-Also, you can show the backend process into its own console (in this case, standard output won't be logged to file):
+Sometimes, you might want to show the backend process into its own console (and in this case, standard output won't be logged to file). Then, use `--backend-console`:
 
 ```
 bonnet --fullscreen --url https://italiancpp.org --backend your-exe.exe --backend-args=arg1,arg2 --backend-console
@@ -91,10 +95,12 @@ Last but not least, when `bonnet`'s window is closed, the backend process will r
 
 ## Development 
 
-`bonnet` is written in C++20 with the support of:
+The idea of `bonnet` comes from [gimmi](https://github.com/gimmi/). I am merely the programmer who has implemented it in C++20 with the support of:
 - [cxxopts](https://github.com/jarro2783/cxxopts)
 - [webview](https://github.com/webview/webview)
 - [tiny-process](https://gitlab.com/eidheim/tiny-process-library)
 - WebView2 [nuget package](https://www.nuget.org/packages/Microsoft.Web.WebView2)
 
 For simplicity, the latter only is installed as a Nuget package into the project, the others are stored in `deps/`.
+
+The name *bonnet* is an idea of mine who sometimes wants to name things after famous pirates. As [Stede Bonnet](https://en.wikipedia.org/wiki/Stede_Bonnet) tried with might and main turning to piracy despite his lack of sailing experience, here I am developing a WebView2 program without any previous experience with that technology!
