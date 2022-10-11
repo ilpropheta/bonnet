@@ -1,5 +1,7 @@
 # bonnet
 
+![bonnet logo](bonnet.png)
+
 `bonnet` is a Windows program that allows you to open a webpage into a self-hosted window and, optionally, to launch a backend process.
 
 ## Installation
