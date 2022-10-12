@@ -31,7 +31,7 @@ namespace bonnet
 		virtual void log_from_process(const char* bytes, size_t n) = 0;
 		virtual void log_from_bonnet(const std::string& message) = 0;
 	};
-	using logger = std::unique_ptr<logger_t>;
+	using logger = std::shared_ptr<logger_t>;
 
 	using web_view_function = std::function<void(webview::webview&, logger_t&)>;
 	using web_view_functions = std::vector<web_view_function>;

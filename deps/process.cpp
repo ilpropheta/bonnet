@@ -5,9 +5,12 @@ namespace TinyProcessLib {
 Process::Process(const std::vector<string_type> &arguments, const string_type &path,
                  std::function<void(const char *bytes, size_t n)> read_stdout,
                  std::function<void(const char *bytes, size_t n)> read_stderr,
-                 bool open_stdin, const Config &config) noexcept
+                 bool open_stdin, const Config &config)
     : closed(true), read_stdout(std::move(read_stdout)), read_stderr(std::move(read_stderr)), open_stdin(open_stdin), config(config) {
-  open(arguments, path);
+  if (0 == open(arguments, path))
+  {
+      throw std::runtime_error("can't open specified process"); // ilpropheta
+  }
   async_read();
 }
 

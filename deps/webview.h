@@ -1317,7 +1317,7 @@ public:
     }
   }
   void *window() { return (void *)m_window; }
-  void terminate() { PostQuitMessage(0); }
+  void terminate() { PostThreadMessage(m_main_thread, WM_QUIT, 0, 0); } // ilpropheta: changed in order to call terminate from another thread
   void dispatch(dispatch_fn_t f) {
     PostThreadMessage(m_main_thread, WM_APP, 0, (LPARAM) new dispatch_fn_t(f));
   }

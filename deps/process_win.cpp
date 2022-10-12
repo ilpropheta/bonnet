@@ -194,14 +194,26 @@ void Process::async_read() noexcept {
   }
 }
 
-int Process::get_exit_status() noexcept {
+std::optional<int> Process::get_exit_status(const std::stop_token& st) noexcept {
   if(data.id == 0)
     return -1;
 
   if(!data.handle)
     return data.exit_status;
 
-  WaitForSingleObject(data.handle, INFINITE);
+  const auto stopCalled = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+
+  std::stop_callback sc{st, [&] {
+    SetEvent(stopCalled);
+   } };
+
+  const HANDLE waiters[2]{ stopCalled, data.handle };
+
+  const auto waitRes = WaitForMultipleObjects(2, waiters, false, INFINITE);
+  if (waitRes == WAIT_OBJECT_0)
+  {
+      return std::nullopt;
+  }
 
   DWORD exit_status;
   if(!GetExitCodeProcess(data.handle, &exit_status))
@@ -352,9 +364,10 @@ void Process::kill(id_type id, bool /*force*/) noexcept {
     TerminateProcess(process_handle, 2);
 }
 
-void Process::ctrl_c() noexcept
+int Process::ctrl_c(int timeoutMs) noexcept
 {
     bool exited = false;
+    int exitCode = -1;
 	if (GetConsoleWindow())
     {
     	FreeConsole();
@@ -363,8 +376,7 @@ void Process::ctrl_c() noexcept
     {
         SetConsoleCtrlHandler(nullptr, true);
         GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
-        int exitStatus;
-        exited = this->try_get_exit_status(exitStatus, 2000);
+        exited = this->try_get_exit_status(exitCode, timeoutMs);
         SetConsoleCtrlHandler(nullptr, false);
         FreeConsole();
     }
@@ -372,6 +384,7 @@ void Process::ctrl_c() noexcept
     {
         this->kill();
     }
+    return exitCode;
 }
 
 } // namespace TinyProcessLib

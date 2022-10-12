@@ -7,6 +7,8 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <optional>
+#include <stop_token>
 #ifndef _WIN32
 #include <sys/wait.h>
 #endif
@@ -86,7 +88,7 @@ public:
           std::function<void(const char *bytes, size_t n)> read_stdout = nullptr,
           std::function<void(const char *bytes, size_t n)> read_stderr = nullptr,
           bool open_stdin = false,
-          const Config &config = {}) noexcept;
+          const Config &config = {});
   /// Starts a process with the environment of the calling process.
   Process(const string_type &command, const string_type &path = string_type(),
           std::function<void(const char *bytes, size_t n)> read_stdout = nullptr,
@@ -125,8 +127,8 @@ public:
 
   /// Get the process id of the started process.
   id_type get_id() const noexcept;
-  /// Wait until process is finished, and return exit status.
-  int get_exit_status() noexcept;
+  /// Wait until process is finished, and return exit status. // ilpropheta: supporting stop_token in order to interrupt waiting
+  std::optional<int> get_exit_status(const std::stop_token& sc) noexcept;
   /// If process is finished, returns true and sets the exit status. Returns false otherwise.
   bool try_get_exit_status(int &exit_status, unsigned long milliseconds = 0) noexcept;
   /// Write to stdin.
@@ -141,7 +143,7 @@ public:
   /// Kill a given process id. Use kill(bool force) instead if possible. force=true is only supported on Unix-like systems.
   static void kill(id_type id, bool force = false) noexcept;
   /// if the process has a console associated, sends a ctrl+c, otherwise kills it
-  void ctrl_c() noexcept;
+  int ctrl_c(int timeoutMilliseconds = 2000) noexcept; // ilpropheta: Windows-only implementation
 #ifndef _WIN32
   /// Send the signal signum to the process.
   void signal(int signum) noexcept;

@@ -203,9 +203,9 @@ static bonnet::logger create_logger(const bonnet::config& config)
 {
 	if (config.no_log_at_all)
 	{
-        return std::make_unique<null_logger>();
+        return std::make_shared<null_logger>();
 	}
-    return std::make_unique<file_logger>("bonnet.txt");
+    return std::make_shared<file_logger>("bonnet.txt");
 }
 
 bonnet::launcher::launcher(config config, web_view_functions fns, logger logger)
@@ -213,9 +213,23 @@ bonnet::launcher::launcher(config config, web_view_functions fns, logger logger)
 {
 }
 
+static std::function<void(const char* bytes, size_t n)> backend_create_stdout_function(const bonnet::config& config, bonnet::logger logger)
+{
+    if (!config.backend_no_log && !config.backend_show_console)
+    {
+        logger->log_from_bonnet("config: will redirect backend output to log file");
+    	return [l=logger](const char* bytes, size_t n) {
+            l->log_from_process(bytes, n);
+        };
+    }
+    return nullptr;
+}
+
 void bonnet::launcher::launch_and_wait()
 {
-    utils::defer logEnding{ [this] { m_logger->log_from_bonnet(std::format("ended at {}\n", utils::timestamp_string())); } };
+    utils::defer log_at_the_end{ [this] {
+	    m_logger->log_from_bonnet(std::format("ended at {}\n", utils::timestamp_string()));
+    } };
     m_logger->log_from_bonnet(std::format("started at {}", utils::timestamp_string()));
 
     webview::webview w(m_config.debug, nullptr);
@@ -224,31 +238,27 @@ void bonnet::launcher::launch_and_wait()
         decorator(w, *m_logger);
     }
 
-    std::function process_closer = [] {};
-    utils::defer deferred{ [&] { process_closer(); } };
-
+    std::jthread backend_worker;
     if (!m_config.backend.empty())
     {
-        std::function<void(const char* bytes, size_t n)> backend_stdout_redirect_fn;
+        m_logger->log_from_bonnet(std::format("config: backend={} show_console={} arguments={}", m_config.backend, m_config.backend_show_console, utils::to_string(m_config.backend_args)));
 
-    	if (!m_config.backend_no_log && !m_config.backend_show_console)
-        {
-            backend_stdout_redirect_fn = [&](const char* bytes, size_t n) {
-                m_logger->log_from_process(bytes, n);
-            };
-            m_logger->log_from_bonnet("config: will redirect backend output to log file");
-        }
+        std::unique_ptr<TinyProcessLib::Process> process = std::make_unique<TinyProcessLib::Process>(
+            utils::join_backend_and_args(m_config.backend, m_config.backend_args), 
+            utils::to_wstring(m_config.backend_workdir), 
+            backend_create_stdout_function(m_config, m_logger), nullptr, false, TinyProcessLib::Config{ .show_window = m_config.backend_show_console ? TinyProcessLib::Config::ShowWindow::show_default : TinyProcessLib::Config::ShowWindow::hide });
 
-    	TinyProcessLib::Config backend_config;
-        backend_config.show_window = m_config.backend_show_console ? TinyProcessLib::Config::ShowWindow::show_default : TinyProcessLib::Config::ShowWindow::hide;
-        std::shared_ptr<TinyProcessLib::Process> process = std::make_shared<TinyProcessLib::Process>(utils::join_backend_and_args(m_config.backend, m_config.backend_args), utils::to_wstring(m_config.backend_workdir), backend_stdout_redirect_fn, backend_stdout_redirect_fn, false, backend_config);
-        m_logger->log_from_bonnet(std::format("config: backend={} with_args={}", m_config.backend, utils::to_string(m_config.backend_args)));
-        process_closer = [p = std::move(process)]{ p->ctrl_c(); };
-
-    	if (m_config.backend_show_console)
-        {
-            m_logger->log_from_bonnet("config: backend console shown (output won't be redirected to log file)");
-        }
+    	backend_worker = std::jthread([this, p=std::move(process), &w](std::stop_token st) {
+    		if (const auto exit = p->get_exit_status(st); exit)
+            {
+                m_logger->log_from_bonnet(std::format("backend process exited autonomously. Exit code={}", *exit));
+                w.terminate();
+            }
+            else
+            {
+                m_logger->log_from_bonnet(std::format("backend process exited after bonnet sent a graceful shutdown. Exit code={}", p->ctrl_c()));
+            }
+        });
     }
 
     w.run();
