@@ -102,7 +102,7 @@ As briefly described above, `bonnet` can optionally launch a process in backgrou
 
 The backend process is simply launched and then managed as follows:
 
-- if the window (the *frontend*) is closed then `bonnet` sends a graceful shutdown (`CTRL+C`) to the backend (if the backend didn't exit within **2 seconds**, it gets killed);
+- if the window (the *frontend*) is closed then `bonnet` sends a graceful shutdown (`CTRL+C`) to the backend (if the backend doesn't exit within **2 seconds**, it gets killed);
 - on the other hand, if the backend process exits (either successfully or not) then `bonnet` closes the window and exits the program as well.
 
 A typical use case is when you have a `kiosk-mode` application that does not allow the user to close the window by hand but, instead, you let the backend receive a command and shutdown.
