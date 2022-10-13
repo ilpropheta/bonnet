@@ -12,7 +12,7 @@
 
 Be sure you have both installed on your system to use bonnet.
 
-## Usage
+## Usage details
 
 By default, `bonnet` displays the help on a `1024x768` window.
 
@@ -24,12 +24,13 @@ Usage:
   bonnet [OPTION...]
 
       --help                 Display this help
-      --width arg            Window width (default: 1024)
-      --height arg           Window height (default: 768)
+      --width arg            Window width (default: 700)
+      --height arg           Window height (default: 600)
       --title arg            Window title (default: bonnet)
       --icon arg             Window icon path (default: "")
       --kiosk-mode           Fullscreen borderless mode
-      --url arg              Navigation url (default: https://google.com)
+      --maximize             Maximize window
+      --url arg              Navigation url (default: "")
       --backend arg          Backend process (default: "")
       --backend-workdir arg  Backend process working dir (default: "")
       --backend-args arg     Backend process arguments (default: "")
@@ -95,6 +96,17 @@ You can even customize the backend process working directory with `backend-workd
 
 Last but not least, when `bonnet`'s window is closed, the backend process will receive a `CTRL+C`. Thus, for correctly handling this graceful shutdown, it's mandatory that your backend process is a console application and that you **don't** launch bonnet with [`START /B`](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/start).
 
+### Backend process management
+
+As briefly described above, `bonnet` can optionally launch a process in background. We call this process *backend*.
+
+The backend process is simply launched and then managed as follows:
+
+- if the window (the *frontend*) is closed then `bonnet` sends a graceful shutdown (`CTRL+C`) to the backend (if the backend didn't exit within **2 seconds**, it gets killed);
+- on the other hand, if the backend process exits (either successfully or not) then `bonnet` closes the window and exits the program as well.
+
+A typical use case is when you have a `kiosk-mode` application that does not allow the user to close the window by hand but, instead, you let the backend receive a command and shutdown.
+
 ## Development 
 
 The idea of `bonnet` comes from [gimmi](https://github.com/gimmi/). I am merely the programmer who has implemented it in C++20 with the support of:
@@ -103,6 +115,6 @@ The idea of `bonnet` comes from [gimmi](https://github.com/gimmi/). I am merely 
 - [tiny-process](https://gitlab.com/eidheim/tiny-process-library)
 - WebView2 [nuget package](https://www.nuget.org/packages/Microsoft.Web.WebView2)
 
-For simplicity, the latter only is installed as a Nuget package into the project, the others are stored in `deps/`.
+For simplicity, the latter only is installed as a Nuget package into the project, the others are stored in `deps/`. A few changes have been made to `webview` and `tiny-process` to accommodate our needs (search the code for `ilpropheta:` for details).
 
 The name *bonnet* is an idea of mine who sometimes wants to name things after famous pirates. As [Stede Bonnet](https://en.wikipedia.org/wiki/Stede_Bonnet) tried with might and main turning to piracy despite his lack of sailing experience, here I am developing a WebView2 program without any previous experience with that technology!
